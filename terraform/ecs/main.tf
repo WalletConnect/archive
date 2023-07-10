@@ -64,7 +64,6 @@ resource "aws_ecs_task_definition" "app_task_definition" {
         { name = "PUBLIC_URL", value = "http://localhost:8080" }, // TODO: Change this to the actual public URL
         { name = "LOG_LEVEL", value = var.log_level },
         { name = "MONGO_ADDRESS", value = var.docdb-connection_url },
-        { name = "CORS_ALLOWED_ORIGINS", value = "*" },
         { name = "TELEMETRY_PROMETHEUS_PORT", value = "8081" }
       ],
       dependsOn = [
@@ -117,6 +116,7 @@ resource "aws_ecs_service" "app_service" {
   task_definition = aws_ecs_task_definition.app_task_definition.arn
   launch_type     = "FARGATE"
   desired_count   = 1
+  propagate_tags  = "TASK_DEFINITION"
 
   # Wait for the service deployment to succeed
   wait_for_steady_state = true
