@@ -1,6 +1,7 @@
 pub mod messages;
 pub mod mongo;
 pub mod registrations;
+pub mod registrations2;
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {

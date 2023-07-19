@@ -1,11 +1,9 @@
 use {
-    crate::{
-        config::Configuration,
-        store::{
-            messages::{Message, MessagesStore, StoreMessages},
-            registrations::{Registration, RegistrationStore},
-            StoreError,
-        },
+    crate::store::{
+        messages::{Message, MessagesStore, StoreMessages},
+        registrations::{Registration, RegistrationStore},
+        registrations2::{Registration2, Registration2Store},
+        StoreError,
     },
     async_trait::async_trait,
     chrono::Utc,
@@ -27,10 +25,8 @@ pub struct MongoStore {
 }
 
 impl MongoStore {
-    pub async fn new(config: &Configuration) -> anyhow::Result<Self> {
-        let url = &config.mongo_address;
-
-        let client_options = ClientOptions::parse(url).await?;
+    pub async fn new(mongo_address: &str) -> anyhow::Result<Self> {
+        let client_options = ClientOptions::parse(mongo_address).await?;
         let client = Client::with_options(client_options)?;
         let db = client.default_database().ok_or_else(|| {
             anyhow::anyhow!("no default database specified in the connection URL")
@@ -84,18 +80,17 @@ impl MongoStore {
         };
         let filter = filter?;
 
-        let message_count: i64 = message_count as i64;
-        let limit = -(message_count + 1);
+        let limit = message_count + 1; // get 1 more for next_id
         let options = FindOptions::builder()
             .sort(doc! {"ts": sort_order})
-            .limit(limit)
+            .limit(-(limit as i64))
             .build();
 
         let cursor = Message::find(&self.db, filter, options).await?;
 
         let mut messages: Vec<Message> = cursor.try_collect().await?;
 
-        if messages.len() > message_count as usize {
+        if messages.len() > message_count {
             let next_id = messages.pop().map(|message| message.message_id);
             return Ok(StoreMessages { messages, next_id });
         }
@@ -111,7 +106,7 @@ impl MongoStore {
 impl MessagesStore for MongoStore {
     async fn upsert_message(
         &self,
-        method: &str,
+        method: Option<&str>,
         client_id: &str,
         topic: &str,
         message_id: &str,
@@ -136,10 +131,9 @@ impl MessagesStore for MongoStore {
 
         let option = FindOneAndUpdateOptions::builder().upsert(true).build();
 
-        match Message::find_one_and_update(&self.db, filter, update, option).await? {
-            Some(_) => Ok(()),
-            None => Ok(()),
-        }
+        Message::find_one_and_update(&self.db, filter, update, option).await?;
+
+        Ok(())
     }
 
     async fn get_messages_after(
@@ -197,6 +191,49 @@ impl RegistrationStore for MongoStore {
         };
 
         let registration = Registration::find_one(&self.db, filter, None).await?;
+        registration.ok_or(StoreError::NotFound(
+            "registration".to_string(),
+            client_id.to_string(),
+        ))
+    }
+}
+
+#[async_trait]
+impl Registration2Store for MongoStore {
+    async fn upsert_registration(
+        &self,
+        client_id: &str,
+        tags: Vec<u32>,
+        relay_url: &str,
+        relay_id: &str,
+    ) -> Result<(), StoreError> {
+        let filter = doc! {
+            "client_id": &client_id,
+        };
+
+        let update = doc! {
+            "$set": {
+                "client_id": &client_id,
+                "tags": tags,
+                "relay_url": &relay_url,
+                "relay_id": &relay_id,
+            }
+        };
+
+        let option = FindOneAndUpdateOptions::builder().upsert(true).build();
+
+        match Registration2::find_one_and_update(&self.db, filter, update, option).await? {
+            Some(_) => Ok(()),
+            None => Ok(()),
+        }
+    }
+
+    async fn get_registration(&self, client_id: &str) -> Result<Registration2, StoreError> {
+        let filter = doc! {
+            "client_id": &client_id,
+        };
+
+        let registration = Registration2::find_one(&self.db, filter, None).await?;
         registration.ok_or(StoreError::NotFound(
             "registration".to_string(),
             client_id.to_string(),

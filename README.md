@@ -16,3 +16,12 @@ This project also includes the standard CI/CD:
 * Test: `cargo test`
 * Run: `docker-compose-up`
 * Integration test: `yarn install` (once) and then `yarn integration:local(dev/staging/prod)`
+
+## Testing
+
+```bash
+cp .env.example .env
+source .env && just lint run-storage-docker test-all
+```
+
+- [ ] TODO Consider making `lint` and `run-storage-docker` dependencies of `test`

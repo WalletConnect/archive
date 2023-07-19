@@ -1,5 +1,5 @@
 use {
-    crate::context::StoreContext,
+    crate::context::store::StoreContext,
     gilgamesh::store::{
         registrations::{Registration, RegistrationStore},
         StoreError,

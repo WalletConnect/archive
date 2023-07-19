@@ -74,13 +74,13 @@ pub async fn handler(
         if match_tag(payload.tag, tag) {
             debug!("tag matching, storing message");
             state
-                .messages_store
+                .message_store
                 .upsert_message(
-                    payload.method.as_ref(),
-                    payload.client_id.as_ref(),
-                    payload.topic.as_ref(),
-                    payload.message_id.as_ref(),
-                    payload.message.as_ref(),
+                    Some(&payload.method),
+                    &payload.client_id,
+                    &payload.topic,
+                    &payload.message_id,
+                    &payload.message,
                 )
                 .await?;
 

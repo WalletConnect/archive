@@ -127,7 +127,7 @@ fmt:
 
   if command -v cargo-fmt >/dev/null; then
     echo '==> Running rustfmt'
-    cargo +nightly fmt -- --check
+    cargo +nightly fmt
   else
     echo '==> rustfmt not found in PATH, skipping'
     echo '    ^^^^^^ To install `rustup component add rustfmt`, see https://github.com/rust-lang/rustfmt for details'

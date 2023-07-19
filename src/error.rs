@@ -6,6 +6,7 @@ use {
     },
     axum::response::{IntoResponse, Response},
     hyper::StatusCode,
+    tracing::debug,
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -96,6 +97,7 @@ pub enum Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
+        debug!("Error: {self}");
         match self {
             Error::Database(e) => crate::handlers::Response::new_failure(StatusCode::INTERNAL_SERVER_ERROR, vec![
                 ResponseError {
@@ -192,7 +194,7 @@ impl IntoResponse for Error {
             e => crate::handlers::Response::new_failure(StatusCode::INTERNAL_SERVER_ERROR, vec![
                 ResponseError {
                     name: "unknown_error".to_string(),
-                    message: "This error should not have occurred. Please file an issue at: https://github.com/walletconnect/echo-server".to_string(),
+                    message: "This error should not have occurred. Please file an issue at: https://github.com/walletconnect/gilgamesh".to_string(),
                 },
                 ResponseError {
                     name: "dbg".to_string(),

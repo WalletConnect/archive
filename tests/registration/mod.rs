@@ -1,5 +1,5 @@
 use {
-    crate::{context::ServerContext, get_client_jwt, TEST_RELAY_URL},
+    crate::{context::server::ServerContext, get_client_jwt, RELAY_HTTP_URL},
     axum::http,
     gilgamesh::{handlers::register::RegisterPayload, store::registrations::Registration},
     std::sync::Arc,
@@ -9,16 +9,16 @@ use {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_register(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let payload = RegisterPayload {
         tags: vec![Arc::from("4000"), Arc::from("5***")],
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
     let client = reqwest::Client::new();
     let response = client
-        .post(format!("http://{}/register", ctx.server.public_addr))
+        .post(format!("{}/register", ctx.server.public_url))
         .json(&payload)
         .header(http::header::AUTHORIZATION, format!("Bearer {jwt}"))
         .send()
@@ -33,7 +33,6 @@ async fn test_register(ctx: &mut ServerContext) {
     );
 
     assert!(ctx
-        .server
         .registration_store
         .registrations
         .get(client_id.value().as_ref())
@@ -43,18 +42,17 @@ async fn test_register(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_get_registration(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let tags = vec![Arc::from("4000"), Arc::from("5***")];
     let registration = Registration {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
-    ctx.server
-        .registration_store
+    ctx.registration_store
         .registrations
         .insert(client_id.to_string(), registration)
         .await;
@@ -85,5 +83,5 @@ async fn test_get_registration(ctx: &mut ServerContext) {
 
     let payload: RegisterPayload = response.json().await.unwrap();
     assert_eq!(payload.tags, tags);
-    assert_eq!(payload.relay_url.as_ref(), TEST_RELAY_URL);
+    assert_eq!(payload.relay_url.as_ref(), RELAY_HTTP_URL);
 }

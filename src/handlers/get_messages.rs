@@ -78,7 +78,7 @@ pub async fn handler(
     let StoreMessages { messages, next_id } = match (&query.origin_id, direction) {
         (origin_id, Direction::Forward) => {
             state
-                .messages_store
+                .message_store
                 .get_messages_after(
                     query.topic.as_ref(),
                     origin_id.as_deref(),
@@ -88,7 +88,7 @@ pub async fn handler(
         }
         (origin_id, Direction::Backward) => {
             state
-                .messages_store
+                .message_store
                 .get_messages_before(
                     query.topic.as_ref(),
                     origin_id.as_deref(),
@@ -100,6 +100,13 @@ pub async fn handler(
 
     increment_counter!(state.metrics, get_queries);
     increment_counter_with!(state.metrics, served_items, messages.len() as u64);
+
+    // Prematurely make breaking change of removing method
+    // https://walletconnect.slack.com/archives/C04CKNV4GN8/p1688127376863359
+    let mut messages = messages;
+    for message in messages.iter_mut() {
+        message.method = None;
+    }
 
     let response = GetMessagesResponse {
         topic: query.topic.clone(),

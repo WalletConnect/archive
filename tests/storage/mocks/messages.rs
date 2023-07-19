@@ -55,7 +55,7 @@ impl MockMessageStore {
 impl MessagesStore for MockMessageStore {
     async fn upsert_message(
         &self,
-        method: &str,
+        method: Option<&str>,
         client_id: &str,
         topic: &str,
         message_id: &str,
@@ -64,7 +64,7 @@ impl MessagesStore for MockMessageStore {
         self.test_add(Message {
             id: None,
             timestamp: Utc::now().into(),
-            method: Arc::from(method),
+            method: method.map(Arc::from),
             client_id: Arc::from(client_id),
             message_id: Arc::from(message_id),
             topic: Arc::from(topic),

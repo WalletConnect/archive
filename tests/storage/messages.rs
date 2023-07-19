@@ -1,5 +1,5 @@
 use {
-    crate::context::StoreContext,
+    crate::context::store::StoreContext,
     ::function_name::named,
     gilgamesh::store::messages::MessagesStore,
     std::time,
@@ -322,7 +322,7 @@ async fn fill_store(ctx: &StoreContext, client_id: &str, topic: &str, size: i32)
         ctx.storage
             .store
             .upsert_message(
-                "publish",
+                Some("publish"),
                 client_id,
                 topic,
                 &id.to_string(),

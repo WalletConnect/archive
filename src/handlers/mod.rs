@@ -9,7 +9,9 @@ pub mod get_registration;
 pub mod health;
 pub mod metrics;
 pub mod register;
+pub mod register_save_message_webhook;
 pub mod save_message;
+pub mod save_message_webhook;
 
 #[derive(serde::Serialize)]
 #[serde(rename_all = "lowercase")]

@@ -61,7 +61,7 @@ resource "aws_ecs_task_definition" "app_task_definition" {
       ],
       environment = [
         { name = "PORT", value = "8080" },
-        { name = "PUBLIC_URL", value = "http://localhost:8080" }, // TODO: Change this to the actual public URL
+        { name = "PUBLIC_URL", value = "https://history.walletconnect.com" }, // TODO: Change this to the actual public URL
         { name = "LOG_LEVEL", value = var.log_level },
         { name = "MONGO_ADDRESS", value = var.docdb-connection_url },
         { name = "TELEMETRY_PROMETHEUS_PORT", value = "8081" }

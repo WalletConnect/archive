@@ -22,6 +22,7 @@ services:
       - LOG_LEVEL=INFO
       - TELEMETRY_ENABLED=true
       - TELEMETRY_GRPC_URL=http://jaeger:4317
+      - PUBLIC_URL=http://localhost:3000
       - MONGO_ADDRESS=mongodb://admin:admin@mongo:27017/gilgamesh?authSource=admin
     healthcheck:
       test: [ "CMD", "curl", "localhost:3000/health" ]

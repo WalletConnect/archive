@@ -24,10 +24,6 @@ pub mod prelude {
     pub use tracing::{debug, error, info, trace, warn};
 }
 
-/// The default log level for the stderr logger, which is used as a fallback if
-/// no other can be found.
-const DEFAULT_LOG_LEVEL_STDERR: tracing::Level = tracing::Level::WARN;
-
 /// The default log level for the telemetry logger, which is used as a fallback
 /// if no other can be found.
 const DEFAULT_LOG_LEVEL_OTEL: tracing::Level = tracing::Level::WARN;
@@ -47,8 +43,9 @@ pub struct Logger {
 
 impl Logger {
     pub fn init() -> crate::error::Result<Self> {
-        let stderr_filter = EnvFilter::try_from_env(ENV_LOG_LEVEL_STDERR)
-            .unwrap_or_else(|_| EnvFilter::new(DEFAULT_LOG_LEVEL_STDERR.to_string()));
+        let stderr_filter = EnvFilter::try_from_env(ENV_LOG_LEVEL_STDERR).unwrap_or_else(|_| {
+            panic!("invalid log level set from {ENV_LOG_LEVEL_STDERR} env var")
+        });
 
         let (writer, guard) = tracing_appender::non_blocking(std::io::stderr());
 

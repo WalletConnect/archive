@@ -1,5 +1,5 @@
 use {
-    crate::{context::ServerContext, get_client_jwt, TEST_RELAY_URL},
+    crate::{context::server::ServerContext, get_client_jwt, RELAY_HTTP_URL},
     axum::http,
     chrono::Utc,
     gilgamesh::{
@@ -22,14 +22,13 @@ const TEST_MESSAGE: &str = "test-message";
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_get_message_no_origin_no_count_no_direction(ctx: &mut ServerContext) {
-    let (jwt, _) = get_client_jwt();
+    let (jwt, _, _) = get_client_jwt(ctx.server.public_url.clone());
 
-    ctx.server
-        .message_store
+    ctx.message_store
         .test_add(Message {
             id: None,
             timestamp: Utc::now().into(),
-            method: Arc::from(TEST_METHOD),
+            method: Some(Arc::from(TEST_METHOD)),
             client_id: Arc::from(TEST_CLIENT_ID),
             message_id: Arc::from(TEST_MESSAGE_ID),
             topic: Arc::from(TEST_TOPIC),
@@ -39,7 +38,7 @@ async fn test_get_message_no_origin_no_count_no_direction(ctx: &mut ServerContex
 
     let client = reqwest::Client::new();
     let response = client
-        .get(format!("http://{}/messages", ctx.server.public_addr))
+        .get(format!("{}/messages", ctx.server.public_url))
         .query(&[("topic", TEST_TOPIC)])
         .header(http::header::AUTHORIZATION, format!("Bearer {jwt}"))
         .send()
@@ -69,14 +68,13 @@ async fn test_get_message_no_origin_no_count_no_direction(ctx: &mut ServerContex
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_get_message_origin_count_forward(ctx: &mut ServerContext) {
-    let (jwt, _) = get_client_jwt();
+    let (jwt, _, _) = get_client_jwt(ctx.server.public_url.clone());
 
-    ctx.server
-        .message_store
+    ctx.message_store
         .test_add(Message {
             id: None,
             timestamp: Utc::now().into(),
-            method: Arc::from(TEST_METHOD),
+            method: Some(Arc::from(TEST_METHOD)),
             client_id: Arc::from(TEST_CLIENT_ID),
             message_id: Arc::from(TEST_MESSAGE_ID),
             topic: Arc::from(TEST_TOPIC),
@@ -86,7 +84,7 @@ async fn test_get_message_origin_count_forward(ctx: &mut ServerContext) {
 
     let client = reqwest::Client::new();
     let response = client
-        .get(format!("http://{}/messages", ctx.server.public_addr))
+        .get(format!("{}/messages", ctx.server.public_url))
         .query(&[
             ("topic", TEST_TOPIC),
             ("originId", "1"),
@@ -121,14 +119,13 @@ async fn test_get_message_origin_count_forward(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_get_message_origin_count_backward(ctx: &mut ServerContext) {
-    let (jwt, _) = get_client_jwt();
+    let (jwt, _, _) = get_client_jwt(ctx.server.public_url.clone());
 
-    ctx.server
-        .message_store
+    ctx.message_store
         .test_add(Message {
             id: None,
             timestamp: Utc::now().into(),
-            method: Arc::from(TEST_METHOD),
+            method: Some(Arc::from(TEST_METHOD)),
             client_id: Arc::from(TEST_CLIENT_ID),
             message_id: Arc::from(TEST_MESSAGE_ID),
             topic: Arc::from(TEST_TOPIC),
@@ -138,7 +135,7 @@ async fn test_get_message_origin_count_backward(ctx: &mut ServerContext) {
 
     let client = reqwest::Client::new();
     let response = client
-        .get(format!("http://{}/messages", ctx.server.public_addr))
+        .get(format!("{}/messages", ctx.server.public_url))
         .query(&[
             ("topic", TEST_TOPIC),
             ("originId", "1"),
@@ -173,18 +170,17 @@ async fn test_get_message_origin_count_backward(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_save_message_saved(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let tags = vec![Arc::from("4000"), Arc::from("5***")];
     let registration = Registration {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
-    ctx.server
-        .registration_store
+    ctx.registration_store
         .registrations
         .insert(client_id.to_string(), registration)
         .await;
@@ -192,7 +188,7 @@ async fn test_save_message_saved(ctx: &mut ServerContext) {
     let client = reqwest::Client::new();
 
     let response = client
-        .post(format!("http://{}/messages", ctx.server.public_addr))
+        .post(format!("{}/messages", ctx.server.public_url))
         .json(&HistoryPayload {
             method: Arc::from(TEST_METHOD),
             client_id: client_id.clone().into_value(),
@@ -236,7 +232,6 @@ async fn test_save_message_saved(ctx: &mut ServerContext) {
     );
 
     let msg = ctx
-        .server
         .message_store
         .test_get(
             client_id.value(),
@@ -251,7 +246,6 @@ async fn test_save_message_saved(ctx: &mut ServerContext) {
     assert_eq!(msg.message.as_ref(), TEST_MESSAGE);
 
     let msg = ctx
-        .server
         .message_store
         .test_get(
             client_id.value(),
@@ -269,18 +263,17 @@ async fn test_save_message_saved(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let tags = vec![Arc::from("4000"), Arc::from("5***")];
     let registration = Registration {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
-    ctx.server
-        .registration_store
+    ctx.registration_store
         .registrations
         .insert(client_id.to_string(), registration)
         .await;
@@ -288,7 +281,7 @@ async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
     let client = reqwest::Client::new();
 
     let response = client
-        .post(format!("http://{}/messages", ctx.server.public_addr))
+        .post(format!("{}/messages", ctx.server.public_url))
         .json(&HistoryPayload {
             method: Arc::from(TEST_METHOD),
             client_id: client_id.clone().into_value(),
@@ -332,7 +325,6 @@ async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
     );
 
     let msg = ctx
-        .server
         .message_store
         .test_get(
             client_id.value(),
@@ -343,7 +335,6 @@ async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
     assert!(msg.is_none());
 
     let msg = ctx
-        .server
         .message_store
         .test_get(
             client_id.value(),
@@ -361,18 +352,17 @@ async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_save_message_no_registration(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let tags = vec![Arc::from("4000"), Arc::from("5***")];
     let registration = Registration {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
-    ctx.server
-        .registration_store
+    ctx.registration_store
         .registrations
         .insert(client_id.to_string(), registration)
         .await;
@@ -380,7 +370,7 @@ async fn test_save_message_no_registration(ctx: &mut ServerContext) {
     let client = reqwest::Client::new();
 
     let response = client
-        .post(format!("http://{}/messages", ctx.server.public_addr))
+        .post(format!("{}/messages", ctx.server.public_url))
         .json(&HistoryPayload {
             method: Arc::from(TEST_METHOD),
             client_id: Arc::from(TEST_CLIENT_ID),
@@ -402,7 +392,6 @@ async fn test_save_message_no_registration(ctx: &mut ServerContext) {
     );
 
     let msg = ctx
-        .server
         .message_store
         .test_get(client_id.value(), TEST_TOPIC, TEST_MESSAGE_ID)
         .await;

@@ -4,6 +4,7 @@ use relay_rpc::{
     auth::{
         ed25519_dalek::Keypair,
         rand::{rngs::StdRng, SeedableRng},
+        SerializedAuthToken,
     },
     domain::{ClientId, DecodedClientId},
 };
@@ -14,8 +15,9 @@ mod metrics;
 mod registration;
 mod simple;
 mod storage;
+mod webhooks;
 
-const TEST_RELAY_URL: &str = "https://history.walletconnect.com";
+const RELAY_HTTP_URL: &str = "http://127.0.0.1:8080"; // TODO make DEFAULT_RELAY_URL and allow switching to local from env
 
 pub type ErrorResult<T> = Result<T, TestError>;
 
@@ -28,18 +30,17 @@ pub enum TestError {
     Gilgamesh(#[from] gilgamesh::error::Error),
 }
 
-fn get_client_jwt() -> (String, ClientId) {
+fn get_client_jwt(history_aud: String) -> (SerializedAuthToken, ClientId, Keypair) {
     let mut rng = StdRng::from_entropy();
     let keypair = Keypair::generate(&mut rng);
 
     let random_client_id = DecodedClientId(*keypair.public_key().as_bytes());
     let client_id = ClientId::from(random_client_id);
 
-    let jwt = relay_rpc::auth::AuthToken::new(client_id.to_string())
-        .aud(TEST_RELAY_URL.to_string())
+    let history_jwt = relay_rpc::auth::AuthToken::new(client_id.to_string())
+        .aud(history_aud)
         .as_jwt(&keypair)
-        .unwrap()
-        .to_string();
+        .unwrap();
 
-    (jwt, client_id)
+    (history_jwt, client_id, keypair)
 }

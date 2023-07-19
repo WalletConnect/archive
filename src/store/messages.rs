@@ -28,7 +28,7 @@ pub struct Message {
     #[serde(rename = "ts")]
     pub timestamp: bson::DateTime,
     /// The messages method (`publish`/`subscription`).
-    pub method: Arc<str>,
+    pub method: Option<Arc<str>>,
     /// The message's client ID.
     pub client_id: Arc<str>,
     /// The message's topic ID.
@@ -49,7 +49,7 @@ pub struct StoreMessages {
 pub trait MessagesStore: 'static + Send + Sync {
     async fn upsert_message(
         &self,
-        method: &str,
+        method: Option<&str>,
         client_id: &str,
         topic: &str,
         message_id: &str,

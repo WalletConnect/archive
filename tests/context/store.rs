@@ -1,7 +1,9 @@
 use {
-    crate::context::server::get_random_port,
-    gilgamesh::{config::Configuration, store::mongo::MongoStore},
-    std::env,
+    super::server::{Gilgamesh, Options},
+    async_trait::async_trait,
+    gilgamesh::{log::Logger, store::mongo::MongoStore},
+    std::{env, sync::Arc},
+    test_context::AsyncTestContext,
 };
 
 #[derive(Clone)]
@@ -11,26 +13,64 @@ pub struct PersistentStorage {
 
 impl PersistentStorage {
     pub async fn init() -> Self {
-        let public_port = get_random_port();
-        let mongo_address = env::var("MONGO_ADDRESS")
-            .unwrap_or("mongodb://admin:admin@localhost:27017/gilgamesh?authSource=admin".into());
+        let mongo_address = env::var("MONGO_ADDRESS").expect("MONGO_ADDRESS env var to be set");
 
-        let config: Configuration = Configuration {
-            port: public_port,
-            public_url: format!("http://127.0.0.1:{public_port}"),
-            log_level: "info,history-server=info".into(),
-            relay_url: "https://relay.walletconnect.com".into(),
-            validate_signatures: false,
-            mongo_address,
-            is_test: true,
-            otel_exporter_otlp_endpoint: None,
-            telemetry_prometheus_port: Some(get_random_port()),
-        };
-
-        let storage = MongoStore::new(&config).await.unwrap();
+        let storage = MongoStore::new(&mongo_address).await.unwrap();
 
         Self { store: storage }
     }
 
     pub async fn shutdown(&mut self) {}
+}
+
+#[derive(Clone)]
+pub struct StoreContext {
+    pub storage: PersistentStorage,
+}
+
+#[async_trait]
+impl AsyncTestContext for StoreContext {
+    async fn setup() -> Self {
+        let storage = PersistentStorage::init().await;
+        Self { storage }
+    }
+
+    async fn teardown(mut self) {
+        self.storage.shutdown().await;
+    }
+}
+
+pub struct ServerStoreContext {
+    pub logger: Logger,
+    pub server: Gilgamesh,
+    pub storage: PersistentStorage,
+}
+
+#[async_trait]
+impl AsyncTestContext for ServerStoreContext {
+    async fn setup() -> Self {
+        let logger = Logger::init().expect("Failed to start logging");
+
+        let mongo_address = env::var("MONGO_ADDRESS")
+            .unwrap_or("mongodb://admin:admin@mongo:27017/gilgamesh?authSource=admin".into());
+        let store = Arc::new(MongoStore::new(&mongo_address).await.unwrap());
+        let options = Options {
+            message_store: store.clone(),
+            registration_store: store.clone(),
+            registration2_store: store.clone(),
+        };
+        let server = Gilgamesh::start(options).await;
+        let storage = PersistentStorage::init().await;
+        Self {
+            logger,
+            server,
+            storage,
+        }
+    }
+
+    async fn teardown(mut self) {
+        self.logger.stop();
+        self.server.shutdown().await;
+        self.storage.shutdown().await;
+    }
 }

@@ -1,4 +1,4 @@
-use {super::error, serde::Deserialize, std::str::FromStr};
+use {super::error, serde::Deserialize, tracing_subscriber::EnvFilter};
 
 const DEFAULT_PORT_NUMBER: u16 = 3001;
 const DEFAULT_LOG_LEVEL: &str = "WARN";
@@ -37,7 +37,12 @@ impl Configuration {
     }
 
     pub fn log_level(&self) -> tracing::Level {
-        tracing::Level::from_str(self.log_level.as_str()).unwrap_or(tracing::Level::INFO)
+        EnvFilter::try_from(&self.log_level)
+            .unwrap_or_else(|_| panic!("invalid log level {}", self.log_level))
+            .max_level_hint()
+            .expect("max_level_hint() is not None")
+            .into_level()
+            .expect("into_level() is not None")
     }
 }
 

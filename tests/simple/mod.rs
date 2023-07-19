@@ -1,4 +1,4 @@
-use {crate::context::ServerContext, test_context::test_context};
+use {crate::context::server::ServerContext, test_context::test_context};
 
 #[test_context(ServerContext)]
 #[tokio::test]
