@@ -66,7 +66,7 @@ pub async fn handler(
         )
         .with_address(format!("{}/rpc", body.relay_url)),
     )
-    .unwrap();
+    .unwrap(); // TODO handle
     let watch_register_response = client
         .watch_register_behalf(body.jwt.to_string())
         .await
