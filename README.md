@@ -21,7 +21,11 @@ This project also includes the standard CI/CD:
 
 ```bash
 cp .env.example .env
-source .env && just lint run-storage-docker test-all
+nano .env
+```
+
+```bash
+just lint run-storage-docker test-all stop-storage-docker
 ```
 
 - [ ] TODO Consider making `lint` and `run-storage-docker` dependencies of `test`
