@@ -18,6 +18,18 @@ use {
     test_context::test_context,
 };
 
+// ==== TODO
+
+// == Integration tests, gate deployment
+// Use prod/staging/dev/localhost instead of deploying history server here
+// Use API to get message instead of calling the store
+// Use JS SDK
+
+// == Unit tests
+// Don't use relay
+// Call webhook registration & handler function directly
+// Access message via get_message handler function directly
+
 #[test_context(ServerStoreContext)]
 #[tokio::test]
 #[cfg_attr(not(feature = "storage-tests"), ignore)]
