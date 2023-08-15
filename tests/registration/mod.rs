@@ -8,7 +8,7 @@ use {
 
 #[test_context(ServerContext)]
 #[tokio::test]
-async fn test_register(ctx: &mut ServerContext) {
+async fn test_register_new(ctx: &mut ServerContext) {
     let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let payload = RegisterPayload {
@@ -44,8 +44,8 @@ async fn test_register(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_register(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
-    let relay_url: Arc<str> = Arc::from(TEST_RELAY_URL);
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
+    let relay_url: Arc<str> = Arc::from(RELAY_HTTP_URL);
 
     struct TestCase {
         name: &'static str,
@@ -116,8 +116,7 @@ async fn test_register(ctx: &mut ServerContext) {
     ];
 
     for test in tests.iter() {
-        ctx.server
-            .registration_store
+        ctx.registration_store
             .registrations
             .insert(client_id.to_string(), Registration {
                 id: None,
@@ -152,7 +151,6 @@ async fn test_register(ctx: &mut ServerContext) {
         );
 
         let registration = ctx
-            .server
             .registration_store
             .registrations
             .get(client_id.value().as_ref());
@@ -177,13 +175,13 @@ async fn test_register(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_register_update_bad_update(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let payload = RegisterPayload {
         tags: None,
         append_tags: Some(vec![Arc::from("5000")]),
         remove_tags: Some(vec![Arc::from("5000")]),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
     let client = reqwest::Client::new();
@@ -203,7 +201,6 @@ async fn test_register_update_bad_update(ctx: &mut ServerContext) {
     );
 
     let registration = ctx
-        .server
         .registration_store
         .registrations
         .get(client_id.value().as_ref());
@@ -217,14 +214,14 @@ async fn test_register_update_bad_update(ctx: &mut ServerContext) {
 #[test_context(ServerContext)]
 #[tokio::test]
 async fn test_register_update_bad_update_with_overwrite(ctx: &mut ServerContext) {
-    let (jwt, client_id) = get_client_jwt();
+    let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
 
     let tags = vec![Arc::from("4000")];
     let payload = RegisterPayload {
         tags: Some(tags.clone()),
         append_tags: Some(vec![Arc::from("5000")]),
         remove_tags: Some(vec![Arc::from("5000")]),
-        relay_url: Arc::from(TEST_RELAY_URL),
+        relay_url: Arc::from(RELAY_HTTP_URL),
     };
 
     let client = reqwest::Client::new();
@@ -244,14 +241,12 @@ async fn test_register_update_bad_update_with_overwrite(ctx: &mut ServerContext)
     );
 
     assert!(ctx
-        .server
         .registration_store
         .registrations
         .get(client_id.value().as_ref())
         .is_some());
 
     let registration = ctx
-        .server
         .registration_store
         .registrations
         .get(client_id.value().as_ref());
