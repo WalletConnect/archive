@@ -11,7 +11,7 @@ services:
     networks:
       - gilgamesh
     ports:
-      - 27017:27017
+      - 27018:27017 # different to not conflict with relay mongo
     healthcheck:
       test:
         [
@@ -35,7 +35,7 @@ services:
     networks:
       - gilgamesh
     ports:
-      - 8085:8081
+      - 8087:8081 # different to not conflict with relay mongo-express
     depends_on:
       mongo:
         condition: service_healthy
@@ -43,7 +43,7 @@ services:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=admin
       - ME_CONFIG_MONGODB_ADMINPASSWORD=admin
       - ME_CONFIG_MONGODB_URL="mongodb://admin:admin@mongo:27017"
-      
+
 networks:
   gilgamesh:
     ipam:

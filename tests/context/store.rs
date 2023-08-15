@@ -52,7 +52,7 @@ impl AsyncTestContext for ServerStoreContext {
         let logger = Logger::init().expect("Failed to start logging");
 
         let mongo_address = env::var("MONGO_ADDRESS")
-            .unwrap_or("mongodb://admin:admin@mongo:27017/gilgamesh?authSource=admin".into());
+            .unwrap_or("mongodb://admin:admin@mongo:27018/gilgamesh?authSource=admin".into());
         let store = Arc::new(MongoStore::new(&mongo_address).await.unwrap());
         let options = Options {
             message_store: store.clone(),
