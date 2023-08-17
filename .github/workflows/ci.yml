@@ -56,7 +56,6 @@ jobs:
           - name: "Documentation Tests"
             cmd: test
             args: --doc
-            rust: stable
             cache: {}
         include:
           - sccache-path: /home/runner/.cache/sccache

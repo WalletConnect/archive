@@ -32,17 +32,17 @@ run: build
 # Run project test suite, skipping storage tests
 test:
   @echo '==> Testing project (default)'
-  cargo test
+  cargo +nightly test
 
 # Run project test suite, including storage tests (requires storage docker services to be running)
 test-all:
   @echo '==> Testing project (all features)'
-  cargo test --all-features
+  cargo +nightly test --all-features
 
 # Run test from project documentation
 test-doc:
   @echo '==> Testing project docs'
-  cargo test --doc
+  cargo +nightly test --doc
 
 # Clean build artifacts
 clean:
@@ -115,7 +115,7 @@ clippy:
 
   if command -v cargo-clippy >/dev/null; then
     echo '==> Running clippy'
-    cargo clippy --all-features --tests -- -D clippy::all -W clippy::style
+    cargo +nightly clippy --all-features --tests -- -D clippy::all -W clippy::style
   else
     echo '==> clippy not found in PATH, skipping'
     echo '    ^^^^^^ To install `rustup component add clippy`, see https://github.com/rust-lang/rust-clippy for details'
