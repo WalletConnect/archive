@@ -13,7 +13,6 @@ use {
         state::{AppState, MessageStorageArc, Registration2StorageArc, RegistrationStorageArc},
     },
     std::{
-        env,
         net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener},
         sync::Arc,
     },
@@ -54,16 +53,12 @@ impl Gilgamesh {
             let public_url = public_url.clone();
             move || {
                 rt.block_on(async move {
-                    let mongo_address =
-                        env::var("MONGO_ADDRESS").expect("MONGO_ADDRESS env var must be set");
-
                     let config = Configuration {
                         port: public_port,
                         public_url,
                         log_level: "info".to_owned(),
                         relay_url: RELAY_HTTP_URL.to_owned(),
                         validate_signatures: false,
-                        mongo_address,
                         is_test: true,
                         otel_exporter_otlp_endpoint: None,
                         telemetry_prometheus_port: Some(get_random_port()),

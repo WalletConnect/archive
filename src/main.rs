@@ -17,7 +17,7 @@ async fn main() -> error::Result<()> {
 
     let store = Arc::new(MongoStore::new(&config.mongo_address).await?);
 
-    let state = AppState::new(config, store.clone(), store.clone(), store.clone())?;
+    let state = AppState::new(config.config, store.clone(), store.clone(), store.clone())?;
 
     let result = gilgamesh::bootstrap(shutdown, state).await;
 

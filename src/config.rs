@@ -5,6 +5,16 @@ const DEFAULT_LOG_LEVEL: &str = "WARN";
 const DEFAULT_RELAY_URL: &str = "https://relay.walletconnect.com";
 const DEFAULT_VALIDATE_SIGNATURES: bool = true;
 
+/// The server configuration that's read from environment
+#[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
+pub struct EnvConfiguration {
+    #[serde(flatten)]
+    pub config: Configuration,
+
+    /// The address of the MongoDB instance.
+    pub mongo_address: String,
+}
+
 /// The server configuration.
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Configuration {
@@ -20,8 +30,6 @@ pub struct Configuration {
     /// A flag to enable or disable the signature validation.
     #[serde(default = "default_validate_signatures")]
     pub validate_signatures: bool,
-    /// The address of the MongoDB instance.
-    pub mongo_address: String,
     /// An internal flag to disable logging, cannot be defined by user.
     #[serde(default = "default_is_test", skip)]
     pub is_test: bool,
@@ -67,7 +75,6 @@ fn default_is_test() -> bool {
 }
 
 /// Create a new configuration from the environment variables.
-pub fn get_config() -> error::Result<Configuration> {
-    let config = envy::from_env::<Configuration>()?;
-    Ok(config)
+pub fn get_config() -> error::Result<EnvConfiguration> {
+    Ok(envy::from_env()?)
 }
