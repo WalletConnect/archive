@@ -71,7 +71,7 @@ thiserror = "1.0"
 [features]
 storage-tests = []
 ci-tests = []
-default = ["storage-tests"]
+default = []
 
 [dev-dependencies]
 test-context = "0.1"
