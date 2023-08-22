@@ -30,14 +30,21 @@ run: build
   cargo run
 
 # Run project test suite, skipping storage tests
-test:
+test: test-doc
   @echo '==> Testing project (default)'
   cargo +nightly test
 
-# Run project test suite, including storage tests (requires storage docker services to be running)
-test-all:
-  @echo '==> Testing project (all features)'
-  cargo +nightly test --all-features
+# Run project test suite, including storage tests
+# Requires storage docker services to be running
+test-storage:
+  @echo '==> Testing project (storage)'
+  cargo +nightly test --features=storage-tests
+
+# Run project test suite, including storage and relay tests
+# Requires storage docker services to be running & incoming network access from the relay
+test-storage-relay:
+  @echo '==> Testing project (storage + relay)'
+  cargo +nightly test --features=storage-tests,relay-tests
 
 # Run test from project documentation
 test-doc:

@@ -20,12 +20,35 @@ This project also includes the standard CI/CD:
 ## Testing
 
 ```bash
+# Optional
 cp .env.example .env
 nano .env
 ```
 
+### Run all dependency-less tests
+
 ```bash
-just lint run-storage-docker test-all stop-storage-docker
+just lint test
 ```
 
-- [ ] TODO Consider making `lint` and `run-storage-docker` dependencies of `test`
+### Storage integration tests (and tests above)
+
+This requires starting Docker dependencies.
+
+```bash
+just lint run-storage-docker test-storage
+```
+
+### Relay integration tests (and tests above)
+
+You must run the relay locally or pass an `ENVIRONMENT` value to use a different, already deployed, history server.
+
+```bash
+just lint run-storage-docker test-storage-relay
+```
+
+### Stop Docker dependencies
+
+```bash
+just stop-storage-docker
+```

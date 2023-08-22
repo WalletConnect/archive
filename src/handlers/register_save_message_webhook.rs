@@ -99,3 +99,17 @@ pub async fn handler(
 
     Ok(Response::default())
 }
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+
+//     #[tokio::test]
+//     async fn test_registration() {
+//         // TODO mock state
+//         // TODO mock relay
+//         // TODO call handler function
+//         // TODO check registered webhook in relay
+//         // TODO check registered webhook in storage
+//     }
+// }

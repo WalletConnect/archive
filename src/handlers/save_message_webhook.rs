@@ -75,6 +75,7 @@ pub async fn handler(
         registration
     };
 
+    // TODO use global relay_id list for authentication
     let relay_id = ClientId::from(claims.basic.iss).into_value(); // Authenticated by `WatchEventClaims::try_from_str()` above
     if registration.relay_id != relay_id {
         return Ok(Response::new_failure(
@@ -116,3 +117,16 @@ pub async fn handler(
 
     Ok(Response::default())
 }
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+
+//     #[tokio::test]
+//     async fn test_registration() {
+//         // TODO mock state
+//         // TODO mock registration state w/ relay ID
+//         // TODO call handler function w/ message webhook
+//         // TODO check message in storage
+//     }
+// }

@@ -1,10 +1,10 @@
 use {
-    crate::{context::store::ServerStoreContext, get_client_jwt, RELAY_HTTP_URL},
+    crate::{context::server_full::ServerFullContext, get_client_jwt, RELAY_HTTP_URL},
     axum::http,
     chrono::Utc,
-    gilgamesh::{
-        handlers::register_save_message_webhook::RegisterPayload,
-        store::messages::MessagesStore,
+    gilgamesh::handlers::{
+        get_messages::GetMessagesResponse,
+        register_save_message_webhook::RegisterPayload,
     },
     log::debug,
     relay_client::{http::Client, ConnectionOptions},
@@ -30,14 +30,14 @@ use {
 // Call webhook registration & handler function directly
 // Access message via get_message handler function directly
 
-#[test_context(ServerStoreContext)]
+#[test_context(ServerFullContext)]
 #[tokio::test]
-#[cfg_attr(not(feature = "storage-tests"), ignore)]
-async fn test_webhooks_registration(ctx: &mut ServerStoreContext) {
+#[cfg_attr(not(all(feature = "storage-tests", feature = "relay-tests")), ignore)]
+async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
     let [(client1_jwt, client1_id, client1_keypair)
         //, (client2_jwt, client2_id, client2_keypair)
     ] =
-        [get_client_jwt(ctx.server.public_url.clone())
+        [get_client_jwt(ctx.server_url.clone())
         //, get_client_jwt()
         ];
 
@@ -57,11 +57,11 @@ async fn test_webhooks_registration(ctx: &mut ServerStoreContext) {
                 ),
                 iss: DidKey::try_from(client1_id.clone()).unwrap(),
                 aud: RELAY_HTTP_URL.to_owned(),
-                sub: ctx.server.public_url.clone(),
+                sub: ctx.server_url.clone(),
             },
             typ: WatchType::Publisher,
             act: WatchAction::Register,
-            whu: format!("{}/v1/save-message-webhook", ctx.server.public_url),
+            whu: format!("{}/v1/save-message-webhook", ctx.server_url),
             tag: tags.clone(),
             sts: vec![WatchStatus::Accepted],
         }
@@ -79,7 +79,7 @@ async fn test_webhooks_registration(ctx: &mut ServerStoreContext) {
         let response = client
             .post(format!(
                 "{}/v1/register-save-message-webhook",
-                ctx.server.public_url
+                ctx.server_url
             ))
             .json(&payload)
             .header(http::header::AUTHORIZATION, format!("Bearer {client1_jwt}"))
@@ -133,18 +133,27 @@ async fn test_webhooks_registration(ctx: &mut ServerStoreContext) {
     // Check message in store
     {
         debug!("checking message in topic {}", topic);
-        let result = ctx
-            .storage
-            .store
-            .get_messages_after(topic.as_ref(), None, 1)
+        let client = reqwest::Client::new();
+        let response = client
+            .get(format!("{}/messages", ctx.server_url))
+            .query(&[("topic", topic)])
+            .header(http::header::AUTHORIZATION, format!("Bearer {client1_jwt}"))
+            .send()
             .await
-            .unwrap();
+            .expect("Call failed");
 
-        assert_eq!(result.messages.len(), 1, "check result length");
+        assert!(
+            response.status().is_success(),
+            "Response was not successful: {:?} - {:?}",
+            response.status(),
+            response.text().await
+        );
 
-        assert_eq!(result.messages.first().unwrap().message, message,);
+        let response = response.json::<GetMessagesResponse>().await.unwrap();
 
-        assert_eq!(result.next_id, None, "Check next_id");
+        assert_eq!(response.messages.len(), 1, "check result length");
+        assert_eq!(response.messages.first().unwrap().message, message,);
+        assert_eq!(response.next_id, None, "Check next_id");
     }
 }
 

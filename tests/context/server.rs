@@ -143,6 +143,7 @@ async fn wait_for_server_to_start(port: u16) -> crate::ErrorResult<()> {
     Ok(tokio::time::timeout(Duration::from_secs(5), poll_fut).await?)
 }
 
+// Server with mocked stoage
 pub struct ServerContext {
     pub server: Gilgamesh,
     pub message_store: Arc<MockMessageStore>,

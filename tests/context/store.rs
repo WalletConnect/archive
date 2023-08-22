@@ -1,7 +1,7 @@
 use {
     super::server::{Gilgamesh, Options},
     async_trait::async_trait,
-    gilgamesh::{log::Logger, store::mongo::MongoStore},
+    gilgamesh::store::mongo::MongoStore,
     std::{env, sync::Arc},
     test_context::AsyncTestContext,
 };
@@ -13,7 +13,9 @@ pub struct PersistentStorage {
 
 impl PersistentStorage {
     pub async fn init() -> Self {
-        let mongo_address = env::var("MONGO_ADDRESS").expect("MONGO_ADDRESS env var to be set");
+        let mongo_address = env::var("MONGO_ADDRESS").unwrap_or_else(|_| {
+            "mongodb://admin:admin@localhost:27018/gilgamesh?authSource=admin".to_owned()
+        });
 
         let storage = MongoStore::new(&mongo_address).await.unwrap();
 
@@ -41,7 +43,6 @@ impl AsyncTestContext for StoreContext {
 }
 
 pub struct ServerStoreContext {
-    pub logger: Logger,
     pub server: Gilgamesh,
     pub storage: PersistentStorage,
 }
@@ -49,8 +50,6 @@ pub struct ServerStoreContext {
 #[async_trait]
 impl AsyncTestContext for ServerStoreContext {
     async fn setup() -> Self {
-        let logger = Logger::init().expect("Failed to start logging");
-
         let mongo_address = env::var("MONGO_ADDRESS")
             .unwrap_or("mongodb://admin:admin@mongo:27018/gilgamesh?authSource=admin".into());
         let store = Arc::new(MongoStore::new(&mongo_address).await.unwrap());
@@ -61,15 +60,10 @@ impl AsyncTestContext for ServerStoreContext {
         };
         let server = Gilgamesh::start(options).await;
         let storage = PersistentStorage::init().await;
-        Self {
-            logger,
-            server,
-            storage,
-        }
+        Self { server, storage }
     }
 
     async fn teardown(mut self) {
-        self.logger.stop();
         self.server.shutdown().await;
         self.storage.shutdown().await;
     }

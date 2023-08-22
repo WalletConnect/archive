@@ -51,7 +51,6 @@ jobs:
             cache: {}
           - name: "Unit Tests"
             cmd: test
-            args: --features ci-tests
             cache: { sharedKey: "tests" }
           - name: "Documentation Tests"
             cmd: test
