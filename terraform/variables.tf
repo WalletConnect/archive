@@ -21,6 +21,11 @@ variable "grafana_endpoint" {
   type        = string
 }
 
+variable "grafana_auth" {
+  description = "Grafana auth token"
+  type        = string
+}
+
 variable "image_version" {
   description = "Optional override for the Docker image version to deploy. Default is `latest`"
   type        = string

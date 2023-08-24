@@ -128,7 +128,7 @@ jobs:
         id: tf-plan-staging
         uses: WalletConnect/actions/terraform/plan/@1.0.3
         env:
-          GRAFANA_AUTH: ${{ steps.grafana-get-key.outputs.key }}
+          TF_VAR_grafana_auth: ${{ steps.grafana-get-key.outputs.key }}
           TF_VAR_grafana_endpoint: ${{ steps.grafana-get-details.outputs.endpoint }}
           TF_VAR_image_version: ${{ needs.get-version.outputs.version }}
         with:
@@ -195,7 +195,7 @@ jobs:
         id: tf-plan-staging
         uses: WalletConnect/actions/terraform/plan/@1.0.3
         env:
-          GRAFANA_AUTH: ${{ steps.grafana-get-key.outputs.key }}
+          TF_VAR_grafana_auth: ${{ steps.grafana-get-key.outputs.key }}
           TF_VAR_grafana_endpoint: ${{ steps.grafana-get-details.outputs.endpoint }}
           TF_VAR_image_version: ${{ needs.get-version.outputs.version }}
         with:
