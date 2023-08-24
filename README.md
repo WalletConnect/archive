@@ -52,3 +52,20 @@ just lint run-storage-docker test-storage-relay
 ```bash
 just stop-storage-docker
 ```
+
+## Terraform
+
+```bash
+cp .env.terraform.example .env.terraform
+nano .env.terrafom
+```
+
+```bash
+source .env.terraform
+nano terraform/terraform.tf # comment out `backend "remote"` block
+git submodule update --init --recursive
+terraform -chdir=terraform init
+terraform -chdir=terraform workspace new dev
+terraform -chdir=terraform workspace select dev
+terraform -chdir=terraform apply -var-file="vars/$(terraform -chdir=terraform workspace show).tfvars"
+```
