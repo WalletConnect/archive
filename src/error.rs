@@ -6,7 +6,7 @@ use {
     },
     axum::response::{IntoResponse, Response},
     hyper::StatusCode,
-    tracing::debug,
+    tracing::warn,
 };
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -100,7 +100,7 @@ pub enum Error {
 
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
-        debug!("Error: {self}");
+        warn!("Error: {self:?}");
         match self {
             Error::Database(e) => crate::handlers::Response::new_failure(StatusCode::INTERNAL_SERVER_ERROR, vec![
                 ResponseError {
