@@ -5,7 +5,7 @@ use {
     tracing_subscriber::EnvFilter,
 };
 
-const DEFAULT_PORT_NUMBER: u16 = 3001;
+const DEFAULT_PORT_NUMBER: u16 = 3000;
 const DEFAULT_LOG_LEVEL: &str = "WARN";
 const DEFAULT_RELAY_URL: &str = "https://relay.walletconnect.com";
 const DEFAULT_VALIDATE_SIGNATURES: bool = true;

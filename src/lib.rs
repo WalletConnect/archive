@@ -52,7 +52,7 @@ pub async fn bootstrap(
     }
 
     let port = state.config.port;
-    let private_port = state.config.telemetry_prometheus_port.unwrap_or(3001);
+    let private_port = state.config.telemetry_prometheus_port.unwrap_or(8081);
 
     let global_middleware = ServiceBuilder::new().layer(
         TraceLayer::new_for_http()
