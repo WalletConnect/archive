@@ -7,7 +7,7 @@ use {
         state::{AppState, CachedRegistration2},
         store::{registrations2::Registration2, StoreError},
     },
-    axum::{extract::State as StateExtractor, Json},
+    axum::{extract::State, Json},
     hyper::StatusCode,
     relay_rpc::{
         domain::{ClientId, DecodedClientId},
@@ -19,7 +19,7 @@ use {
 
 /// Webhooks 2.0 webhook
 pub async fn handler(
-    StateExtractor(state): StateExtractor<Arc<AppState>>,
+    State(state): State<Arc<AppState>>,
     Json(payload): Json<WatchWebhookPayload>,
 ) -> error::Result<Response> {
     debug!("Received webhook: {:?}", payload);
@@ -31,7 +31,6 @@ pub async fn handler(
     claims.verify_basic(&state.auth_aud, None)?;
     let client_id =
         ClientId::from(DecodedClientId::try_from_did_key(&claims.basic.sub).unwrap()).into_value();
-    debug!("webhook sub client_id: {client_id}");
     let evt = claims.evt;
 
     let registration = if let Some(registration) = state
@@ -118,15 +117,117 @@ pub async fn handler(
     Ok(Response::default())
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        crate::{
+            config::Configuration,
+            handlers::ResponseStatus,
+            store::{
+                messages::MessagesStore,
+                mocks::{
+                    messages::MockMessageStore,
+                    registrations::MockRegistrationStore,
+                    registrations2::MockRegistration2Store,
+                },
+                registrations2::Registration2Store,
+            },
+        },
+        chrono::Utc,
+        relay_rpc::{
+            auth::{ed25519_dalek::Keypair, rand::rngs::OsRng},
+            domain::{DidKey, Topic},
+            jwt::JwtBasicClaims,
+            rpc::{WatchAction, WatchEventPayload, WatchType},
+        },
+    };
 
-//     #[tokio::test]
-//     async fn test_registration() {
-//         // TODO mock state
-//         // TODO mock registration state w/ relay ID
-//         // TODO call handler function w/ message webhook
-//         // TODO check message in storage
-//     }
-// }
+    #[tokio::test]
+    async fn test_webhook() {
+        let public_url = "http://localhost:3000";
+        let relay_url = "http://localhost:3001";
+
+        let message_store = Arc::new(MockMessageStore::new());
+        let registration_store = Arc::new(MockRegistrationStore::new());
+        let registration2_store = Arc::new(MockRegistration2Store::new());
+        let app_state = AppState::new(
+            Configuration {
+                port: 3000,
+                public_url: public_url.to_owned(),
+                log_level: "info".to_owned(),
+                relay_url: relay_url.to_owned(),
+                validate_signatures: false,
+                is_test: true,
+                otel_exporter_otlp_endpoint: None,
+                telemetry_prometheus_port: None,
+            },
+            message_store.clone(),
+            registration_store,
+            registration2_store.clone(),
+        )
+        .unwrap();
+
+        let client_keypair = Keypair::generate(&mut OsRng);
+        let client_id = DecodedClientId::from_key(&client_keypair.public_key());
+        let relay_keypair = Keypair::generate(&mut OsRng);
+        let relay_id = DecodedClientId::from_key(&relay_keypair.public_key());
+
+        let tag = 4000;
+        registration2_store
+            .upsert_registration(
+                &client_id.to_string(),
+                vec![tag],
+                relay_url,
+                &relay_id.to_string(),
+            )
+            .await
+            .unwrap();
+
+        let topic = Topic::generate().to_string();
+        let message = "test-message";
+        let event_auth = WatchEventClaims {
+            basic: JwtBasicClaims {
+                iss: DidKey::from(DecodedClientId::from_key(&relay_keypair.public_key())),
+                aud: public_url.to_owned(),
+                sub: client_id.to_did_key(),
+                iat: Utc::now().timestamp(),
+                exp: None,
+            },
+            act: WatchAction::WatchEvent,
+            typ: WatchType::Publisher,
+            whu: format!("{public_url}/v1/save-message-webhook"),
+            evt: WatchEventPayload {
+                status: relay_rpc::rpc::WatchStatus::Accepted,
+                topic: topic.clone().into(),
+                message: message.to_owned().into(),
+                published_at: Utc::now().timestamp(),
+                tag,
+            },
+        }
+        .encode(&relay_keypair)
+        .unwrap();
+        let webhook_payload = WatchWebhookPayload { event_auth };
+
+        let response = handler(State(Arc::new(app_state)), Json(webhook_payload))
+            .await
+            .unwrap();
+        assert_eq!(response.status, ResponseStatus::Success);
+        assert!(response.status_code.is_success());
+
+        let messages = message_store
+            .get_messages_after(&topic, None, 2)
+            .await
+            .unwrap();
+        assert_eq!(messages.messages.len(), 1);
+        let message_text = message;
+        let message = messages.messages.first().unwrap();
+        assert_eq!(message.topic, topic.into());
+        assert_eq!(message.message, message_text.into());
+        assert_eq!(message.message_id, get_message_id(message_text).into());
+        assert_eq!(message.client_id, client_id.to_string().into());
+    }
+
+    // TODO test wrong aud in WatchEvent payload
+    // TODO test wrong iss (not relay) in WatchEvent payload
+}

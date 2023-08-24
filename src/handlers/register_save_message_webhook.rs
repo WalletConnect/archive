@@ -262,4 +262,6 @@ mod test {
             .unwrap();
         assert_eq!(registration.relay_url, relay_url.into());
     }
+
+    // TODO test wrong aud in token
 }
