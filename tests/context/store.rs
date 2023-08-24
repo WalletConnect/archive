@@ -1,5 +1,6 @@
 use {
     super::server::{Gilgamesh, Options},
+    crate::LOCALHOST_RELAY_URL,
     async_trait::async_trait,
     gilgamesh::store::mongo::MongoStore,
     std::{env, sync::Arc},
@@ -54,6 +55,7 @@ impl AsyncTestContext for ServerStoreContext {
             .unwrap_or("mongodb://admin:admin@mongo:27018/gilgamesh?authSource=admin".into());
         let store = Arc::new(MongoStore::new(&mongo_address).await.unwrap());
         let options = Options {
+            relay_url: LOCALHOST_RELAY_URL.to_owned(),
             message_store: store.clone(),
             registration_store: store.clone(),
             registration2_store: store.clone(),

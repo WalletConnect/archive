@@ -1,5 +1,5 @@
 use {
-    crate::{context::server::ServerContext, get_client_jwt, RELAY_HTTP_URL},
+    crate::{context::server::ServerContext, get_client_jwt},
     axum::http,
     gilgamesh::{handlers::register::RegisterPayload, store::registrations::Registration},
     std::sync::Arc,
@@ -15,7 +15,7 @@ async fn test_register_new(ctx: &mut ServerContext) {
         tags: Some(vec![Arc::from("4000"), Arc::from("5***")]),
         append_tags: None,
         remove_tags: None,
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     let client = reqwest::Client::new();
@@ -45,7 +45,7 @@ async fn test_register_new(ctx: &mut ServerContext) {
 #[tokio::test]
 async fn test_register(ctx: &mut ServerContext) {
     let (jwt, client_id, _) = get_client_jwt(ctx.server.public_url.clone());
-    let relay_url: Arc<str> = Arc::from(RELAY_HTTP_URL);
+    let relay_url: Arc<str> = Arc::from(ctx.relay_url.clone());
 
     struct TestCase {
         name: &'static str,
@@ -181,7 +181,7 @@ async fn test_register_update_bad_update(ctx: &mut ServerContext) {
         tags: None,
         append_tags: Some(vec![Arc::from("5000")]),
         remove_tags: Some(vec![Arc::from("5000")]),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     let client = reqwest::Client::new();
@@ -221,7 +221,7 @@ async fn test_register_update_bad_update_with_overwrite(ctx: &mut ServerContext)
         tags: Some(tags.clone()),
         append_tags: Some(vec![Arc::from("5000")]),
         remove_tags: Some(vec![Arc::from("5000")]),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     let client = reqwest::Client::new();
@@ -273,7 +273,7 @@ async fn test_get_registration(ctx: &mut ServerContext) {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     ctx.registration_store
@@ -307,5 +307,5 @@ async fn test_get_registration(ctx: &mut ServerContext) {
 
     let payload: RegisterPayload = response.json().await.unwrap();
     assert_eq!(payload.tags.unwrap(), tags);
-    assert_eq!(payload.relay_url.as_ref(), RELAY_HTTP_URL);
+    assert_eq!(payload.relay_url.as_ref(), ctx.relay_url.clone());
 }

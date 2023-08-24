@@ -1,16 +1,14 @@
 use {
-    crate::{
-        storage::mocks::{
-            messages::MockMessageStore,
-            registrations::MockRegistrationStore,
-            registrations2::MockRegistration2Store,
-        },
-        RELAY_HTTP_URL,
-    },
+    crate::LOCALHOST_RELAY_URL,
     async_trait::async_trait,
     gilgamesh::{
         config::Configuration,
         state::{AppState, MessageStorageArc, Registration2StorageArc, RegistrationStorageArc},
+        store::mocks::{
+            messages::MockMessageStore,
+            registrations::MockRegistrationStore,
+            registrations2::MockRegistration2Store,
+        },
     },
     std::{
         net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, TcpListener},
@@ -25,6 +23,7 @@ use {
 };
 
 pub struct Options {
+    pub relay_url: String,
     pub message_store: MessageStorageArc,
     pub registration_store: RegistrationStorageArc,
     pub registration2_store: Registration2StorageArc,
@@ -57,7 +56,7 @@ impl Gilgamesh {
                         port: public_port,
                         public_url,
                         log_level: "info".to_owned(),
-                        relay_url: RELAY_HTTP_URL.to_owned(),
+                        relay_url: options.relay_url,
                         validate_signatures: false,
                         is_test: true,
                         otel_exporter_otlp_endpoint: None,
@@ -145,6 +144,7 @@ async fn wait_for_server_to_start(port: u16) -> crate::ErrorResult<()> {
 
 // Server with mocked stoage
 pub struct ServerContext {
+    pub relay_url: String,
     pub server: Gilgamesh,
     pub message_store: Arc<MockMessageStore>,
     pub registration_store: Arc<MockRegistrationStore>,
@@ -154,16 +154,19 @@ pub struct ServerContext {
 #[async_trait]
 impl AsyncTestContext for ServerContext {
     async fn setup() -> Self {
+        let relay_url = LOCALHOST_RELAY_URL.to_owned();
         let message_store = Arc::new(MockMessageStore::new());
         let registration_store = Arc::new(MockRegistrationStore::new());
         let registration2_store = Arc::new(MockRegistration2Store::new());
         let server = Gilgamesh::start(Options {
+            relay_url: relay_url.clone(),
             message_store: message_store.clone(),
             registration_store: registration_store.clone(),
             registration2_store: registration2_store.clone(),
         })
         .await;
         Self {
+            relay_url,
             server,
             message_store,
             registration_store,

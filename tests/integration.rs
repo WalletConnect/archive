@@ -17,7 +17,7 @@ mod simple;
 mod storage;
 mod webhooks;
 
-const RELAY_HTTP_URL: &str = "http://127.0.0.1:8080"; // TODO make DEFAULT_RELAY_URL and allow switching to local from env
+const LOCALHOST_RELAY_URL: &str = "http://127.0.0.1:8080";
 
 pub type ErrorResult<T> = Result<T, TestError>;
 

@@ -41,10 +41,18 @@ just lint run-storage-docker test-storage
 
 ### Relay integration tests (and tests above)
 
-You must run the relay locally or pass an `ENVIRONMENT` value to use a different, already deployed, history server.
+You must run the relay locally.
 
 ```bash
 just lint run-storage-docker test-storage-relay
+```
+
+### Relay integration tests (and tests above)
+
+Pass an `ENVIRONMENT` value to use a different, already deployed, history server.
+
+```bash
+just lint test-external
 ```
 
 ### Stop Docker dependencies

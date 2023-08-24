@@ -1,4 +1,5 @@
 pub mod messages;
+pub mod mocks;
 pub mod mongo;
 pub mod registrations;
 pub mod registrations2;

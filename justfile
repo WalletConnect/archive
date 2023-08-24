@@ -46,6 +46,12 @@ test-storage-relay:
   @echo '==> Testing project (storage + relay)'
   cargo +nightly test --features=storage-tests,relay-tests
 
+# Run project test suite against an external service
+# Set ENVIRONMENT variable (e.g. dev, staging, prod)
+test-external:
+  @echo '==> Testing project (external)'
+  cargo +nightly test --features=relay-tests
+
 # Run test from project documentation
 test-doc:
   @echo '==> Testing project docs'

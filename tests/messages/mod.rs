@@ -1,5 +1,5 @@
 use {
-    crate::{context::server::ServerContext, get_client_jwt, RELAY_HTTP_URL},
+    crate::{context::server::ServerContext, get_client_jwt},
     axum::http,
     chrono::Utc,
     gilgamesh::{
@@ -177,7 +177,7 @@ async fn test_save_message_saved(ctx: &mut ServerContext) {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     ctx.registration_store
@@ -270,7 +270,7 @@ async fn test_save_message_filtered_out(ctx: &mut ServerContext) {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     ctx.registration_store
@@ -359,7 +359,7 @@ async fn test_save_message_no_registration(ctx: &mut ServerContext) {
         id: None,
         client_id: client_id.clone().into_value(),
         tags: tags.clone(),
-        relay_url: Arc::from(RELAY_HTTP_URL),
+        relay_url: Arc::from(ctx.relay_url.clone()),
     };
 
     ctx.registration_store

@@ -1,5 +1,5 @@
 use {
-    crate::{context::server_full::ServerFullContext, get_client_jwt, RELAY_HTTP_URL},
+    crate::{context::server_full::ServerFullContext, get_client_jwt},
     axum::http,
     chrono::Utc,
     gilgamesh::handlers::{
@@ -32,7 +32,7 @@ use {
 
 #[test_context(ServerFullContext)]
 #[tokio::test]
-#[cfg_attr(not(all(feature = "storage-tests", feature = "relay-tests")), ignore)]
+#[cfg_attr(not(feature = "relay-tests"), ignore)]
 async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
     let [(client1_jwt, client1_id, client1_keypair)
         //, (client2_jwt, client2_id, client2_keypair)
@@ -45,7 +45,7 @@ async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
     let tag = 4000;
     {
         let tags = vec![tag];
-        let relay_url = Arc::from(RELAY_HTTP_URL);
+        let relay_url = Arc::from(ctx.relay_url.clone());
 
         let iat = Utc::now();
         let jwt = WatchRegisterClaims {
@@ -56,7 +56,7 @@ async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
                         .timestamp(),
                 ),
                 iss: DidKey::try_from(client1_id.clone()).unwrap(),
-                aud: RELAY_HTTP_URL.to_owned(),
+                aud: ctx.relay_url.to_owned(),
                 sub: ctx.server_url.clone(),
             },
             typ: WatchType::Publisher,
@@ -109,11 +109,11 @@ async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
         let client = Client::new(
             &ConnectionOptions::new(
                 "b7bbb0d762d747e486e20f72f0fb5a59", // TODO externalize
-                AuthToken::new(RELAY_HTTP_URL)
+                AuthToken::new(ctx.relay_url.clone())
                     .as_jwt(&client1_keypair)
                     .unwrap(),
             )
-            .with_address(format!("{RELAY_HTTP_URL}/rpc")),
+            .with_address(format!("{}/rpc", ctx.relay_url)),
         )
         .unwrap();
         client

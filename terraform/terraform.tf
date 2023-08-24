@@ -2,13 +2,13 @@
 terraform {
   required_version = "~> 1.0"
 
-  backend "remote" {
-    hostname     = "app.terraform.io"
-    organization = "wallet-connect"
-    workspaces {
-      prefix = "gilgamesh-"
-    }
-  }
+  # backend "remote" {
+  #   hostname     = "app.terraform.io"
+  #   organization = "wallet-connect"
+  #   workspaces {
+  #     prefix = "gilgamesh-"
+  #   }
+  # }
 
   required_providers {
     aws = {

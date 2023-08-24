@@ -1,9 +1,9 @@
 use {
-    async_trait::async_trait,
-    gilgamesh::store::{
+    crate::store::{
         registrations2::{Registration2, Registration2Store},
         StoreError,
     },
+    async_trait::async_trait,
     moka::future::Cache,
     std::{fmt::Debug, sync::Arc},
 };
@@ -14,6 +14,7 @@ pub struct MockRegistration2Store {
 }
 
 impl MockRegistration2Store {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             registrations2: Cache::builder().build(),

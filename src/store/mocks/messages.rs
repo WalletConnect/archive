@@ -1,10 +1,10 @@
 use {
-    async_trait::async_trait,
-    chrono::Utc,
-    gilgamesh::store::{
+    crate::store::{
         messages::{Message, MessagesStore, StoreMessages},
         StoreError,
     },
+    async_trait::async_trait,
+    chrono::Utc,
     moka::future::Cache,
     std::{fmt::Debug, sync::Arc},
 };
@@ -20,6 +20,7 @@ fn cache_key(client_id: &str, topic: &str, message_id: &str) -> String {
 }
 
 impl MockMessageStore {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self {
             messages: Cache::builder().build(),
