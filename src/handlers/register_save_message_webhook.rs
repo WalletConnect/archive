@@ -156,7 +156,7 @@ mod test {
         let relay_url = relay_server.uri();
 
         Mock::given(method(Method::Post))
-            .and(path(format!("/rpc")))
+            .and(path("/rpc"))
             .respond_with(|req: &WiremockRequest| {
                 ResponseTemplate::new(StatusCode::OK).set_body_json(Response::Success(
                     SuccessfulResponse {
