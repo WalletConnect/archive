@@ -22,12 +22,7 @@ use {
 #[tokio::test]
 #[cfg_attr(not(feature = "relay-tests"), ignore)]
 async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
-    let [(client1_jwt, client1_id, client1_keypair)
-        //, (client2_jwt, client2_id, client2_keypair)
-    ] =
-        [get_client_jwt(ctx.server_url.clone())
-        //, get_client_jwt()
-        ];
+    let (client1_jwt, client1_id, client1_keypair) = get_client_jwt(ctx.server_url.clone());
 
     // Register watcher
     let tag = 4000;
@@ -81,14 +76,7 @@ async fn test_webhooks_registration(ctx: &mut ServerFullContext) {
             response.status(),
             response.text().await
         );
-
-        // assert!((Arc::new(ctx.storage.store) as Registration2StorageArc)
-        //     .get_registration(client1_id.value().as_ref())
-        //     .await
-        //     .is_ok());
     }
-
-    // tokio::time::sleep(Duration::from_secs(2)).await;
 
     let topic = Topic::generate();
     let message: Arc<str> = Arc::from("Hello WalletConnect!");
