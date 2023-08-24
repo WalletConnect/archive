@@ -9,6 +9,11 @@ variable "log_level" {
   default     = "INFO"
 }
 
+variable "public_url" {
+  description = "The public URL of the service."
+  type        = string
+}
+
 variable "image" {
   description = "The name of the ECR image to use for the container."
   type        = string

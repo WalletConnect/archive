@@ -76,6 +76,7 @@ module "ecs" {
   source  = "./ecs"
   context = module.this.context
 
+  public_url                      = local.fqdn
   prometheus_endpoint             = aws_prometheus_workspace.prometheus.prometheus_endpoint
   image                           = "${data.aws_ecr_repository.repository.repository_url}:${local.version}"
   acm_certificate_arn             = module.dns.certificate_arn
