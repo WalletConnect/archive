@@ -20,6 +20,7 @@ use {
         jwt::{JwtBasicClaims, VerifyableClaims},
         rpc::WatchRegisterClaims,
     },
+    reqwest::Url,
     serde::{Deserialize, Serialize},
     std::sync::Arc,
 };
@@ -48,7 +49,7 @@ pub async fn handler(
             StatusCode::BAD_REQUEST,
             vec![ResponseError {
                 name: "forbidden".to_owned(),
-                message: "relay_id does not match the registered relay_id".to_owned(),
+                message: "Authentication JWT iss does not match body JWT iss".to_owned(),
             }],
             vec![],
         ));
@@ -57,6 +58,13 @@ pub async fn handler(
     let mut rng = StdRng::from_entropy();
     let keypair = Keypair::generate(&mut rng);
 
+    let relay_rpc_url = body
+        .relay_url
+        .parse::<Url>()
+        .unwrap()
+        .join("rpc")
+        .unwrap()
+        .to_string(); // TODO remove unwrap()
     let client = Client::new(
         &ConnectionOptions::new(
             "b7bbb0d762d747e486e20f72f0fb5a59", // TODO externalize
@@ -64,13 +72,13 @@ pub async fn handler(
                 .as_jwt(&keypair)
                 .unwrap(),
         )
-        .with_address(format!("{}/rpc", body.relay_url)),
+        .with_address(relay_rpc_url),
     )
-    .unwrap(); // TODO handle
+    .expect("Relay client setup should succeeed");
     let watch_register_response = client
         .watch_register_behalf(body.jwt.to_string())
         .await
-        .unwrap(); // TODO handle
+        .unwrap(); // TODO remove unwrap()
 
     let client_id = ClientId::from(claims.iss);
     debug!("register webhook client_id: {}", client_id.value());
@@ -100,16 +108,158 @@ pub async fn handler(
     Ok(Response::default())
 }
 
-// #[cfg(test)]
-// mod test {
-//     use super::*;
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        crate::{
+            config::Configuration,
+            handlers::ResponseStatus,
+            store::mocks::{
+                messages::MockMessageStore,
+                registrations::MockRegistrationStore,
+                registrations2::MockRegistration2Store,
+            },
+        },
+        chrono::Utc,
+        relay_rpc::{
+            auth::rand::rngs::OsRng,
+            domain::{DecodedClientId, DidKey},
+            rpc::{
+                Params,
+                Payload,
+                Request,
+                Response,
+                SuccessfulResponse,
+                WatchAction,
+                WatchRegisterResponse,
+                WatchStatus,
+                WatchType,
+                JSON_RPC_VERSION,
+            },
+        },
+        wiremock::{
+            http::Method,
+            matchers::{method, path},
+            Mock,
+            MockServer,
+            Request as WiremockRequest,
+            ResponseTemplate,
+        },
+    };
 
-//     #[tokio::test]
-//     async fn test_registration() {
-//         // TODO mock state
-//         // TODO mock relay
-//         // TODO call handler function
-//         // TODO check registered webhook in relay
-//         // TODO check registered webhook in storage
-//     }
-// }
+    #[tokio::test]
+    async fn test_registration() {
+        let public_url = "http://localhost:3000";
+
+        let relay_server = MockServer::start().await;
+        let relay_url = relay_server.uri();
+
+        Mock::given(method(Method::Post))
+            .and(path(format!("/rpc")))
+            .respond_with(|req: &WiremockRequest| {
+                ResponseTemplate::new(StatusCode::OK).set_body_json(Response::Success(
+                    SuccessfulResponse {
+                        id: req.body_json::<Request>().unwrap().id,
+                        jsonrpc: JSON_RPC_VERSION.clone(),
+                        result: serde_json::to_value(WatchRegisterResponse {
+                            relay_id: DidKey::from(DecodedClientId::from_key(
+                                &Keypair::generate(&mut OsRng).public_key(),
+                            )),
+                        })
+                        .unwrap(),
+                    },
+                ))
+            })
+            .mount(&relay_server)
+            .await;
+
+        let message_store = Arc::new(MockMessageStore::new());
+        let registration_store = Arc::new(MockRegistrationStore::new());
+        let registration2_store = Arc::new(MockRegistration2Store::new());
+        let app_state = AppState::new(
+            Configuration {
+                port: 3000,
+                public_url: public_url.to_owned(),
+                log_level: "info".to_owned(),
+                relay_url: relay_url.clone(),
+                validate_signatures: false,
+                is_test: true,
+                otel_exporter_otlp_endpoint: None,
+                telemetry_prometheus_port: None,
+            },
+            message_store,
+            registration_store,
+            registration2_store.clone(),
+        )
+        .unwrap();
+
+        let keypair = Keypair::generate(&mut OsRng);
+        let client_id = DecodedClientId::from_key(&keypair.public_key());
+        let claims = JwtBasicClaims {
+            iss: DidKey::from(client_id.clone()),
+            aud: public_url.to_owned(),
+            sub: "".to_owned(),
+            iat: Utc::now().timestamp(),
+            exp: None,
+        };
+        let jwt = claims.encode(&keypair).unwrap();
+        let auth_bearer = AuthBearer(jwt);
+
+        let tag = 4000;
+        let tags = vec![tag];
+        let watch_claims = WatchRegisterClaims {
+            basic: JwtBasicClaims {
+                iss: DidKey::from(DecodedClientId::from_key(&keypair.public_key())),
+                aud: relay_url.to_owned(),
+                sub: public_url.to_owned(),
+                iat: Utc::now().timestamp(),
+                exp: None,
+            },
+            act: WatchAction::Register,
+            typ: WatchType::Publisher,
+            whu: format!("{public_url}/v1/save-message-webhook"),
+            tag: tags.clone(),
+            sts: vec![WatchStatus::Accepted],
+        };
+
+        let register_payload = RegisterPayload {
+            jwt: watch_claims.encode(&keypair).unwrap().into(),
+            tags,
+            relay_url: relay_url.clone().into(),
+        };
+
+        let response = handler(
+            State(Arc::new(app_state)),
+            auth_bearer,
+            Json(register_payload),
+        )
+        .await
+        .unwrap();
+        assert_eq!(response.status, ResponseStatus::Success);
+        assert!(response.status_code.is_success());
+
+        let relay_requests = relay_server.received_requests().await.unwrap();
+        assert_eq!(relay_requests.len(), 1);
+
+        let relay_request = &relay_requests[0];
+        let payload = relay_request.body_json::<Payload>().unwrap();
+        payload.validate().unwrap();
+        let Payload::Request(request) = payload else {
+            panic!("payload not Request");
+        };
+        let Params::WatchRegister(watch_register) = request.params else {
+            panic!("params not WatchRegister");
+        };
+        let watch_register_claims =
+            WatchRegisterClaims::try_from_str(&watch_register.register_auth).unwrap();
+        assert_eq!(watch_register_claims.act, WatchAction::Register);
+        assert_eq!(watch_register_claims, watch_claims);
+
+        let registration = registration2_store
+            .registrations2
+            .get(&client_id.to_string())
+            .unwrap();
+        assert_eq!(registration.relay_url, relay_url.into());
+    }
+}

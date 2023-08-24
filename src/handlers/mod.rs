@@ -20,7 +20,7 @@ pub enum ErrorLocation {
     Header,
 }
 
-#[derive(serde::Serialize)]
+#[derive(serde::Serialize, PartialEq, Debug)]
 #[serde(rename_all = "UPPERCASE")]
 pub enum ResponseStatus {
     Success,

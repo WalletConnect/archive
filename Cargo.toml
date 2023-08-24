@@ -75,6 +75,7 @@ relay-tests = []
 [dev-dependencies]
 test-context = "0.1"
 function_name = "0.3.0"
+wiremock = "0.5.19"
 
 [build-dependencies]
 build-info-build = "0.0"
