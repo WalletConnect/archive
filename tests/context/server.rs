@@ -83,9 +83,6 @@ impl Gilgamesh {
         Self {
             public_addr,
             public_url,
-            // message_store: options.messages_store.clone(),
-            // registration_store,
-            // registration2_store,
             shutdown_signal: signal,
             is_shutdown: false,
         }
