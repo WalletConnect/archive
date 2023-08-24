@@ -1,4 +1,9 @@
-use {super::error, serde::Deserialize, tracing_subscriber::EnvFilter};
+use {
+    super::error,
+    serde::{de, Deserialize},
+    std::{fmt, fmt::Display, marker::PhantomData, str::FromStr},
+    tracing_subscriber::EnvFilter,
+};
 
 const DEFAULT_PORT_NUMBER: u16 = 3001;
 const DEFAULT_LOG_LEVEL: &str = "WARN";
@@ -19,7 +24,10 @@ pub struct EnvConfiguration {
 #[derive(Deserialize, Debug, Clone, Eq, PartialEq)]
 pub struct Configuration {
     /// The port number of the HTTP server.
-    #[serde(default = "default_port")]
+    #[serde(
+        default = "default_port",
+        deserialize_with = "deserialize_stringified_any"
+    )]
     pub port: u16,
     pub public_url: String,
     #[serde(default = "default_log_level")]
@@ -35,6 +43,7 @@ pub struct Configuration {
     pub is_test: bool,
 
     pub otel_exporter_otlp_endpoint: Option<String>,
+    #[serde(default, deserialize_with = "deserialize_stringified_any_option")]
     pub telemetry_prometheus_port: Option<u16>,
 }
 
@@ -77,4 +86,73 @@ fn default_is_test() -> bool {
 /// Create a new configuration from the environment variables.
 pub fn get_config() -> error::Result<EnvConfiguration> {
     Ok(envy::from_env()?)
+}
+
+// ==== Workaround copied from here: https://github.com/softprops/envy/issues/26#issuecomment-822728576
+
+pub fn deserialize_stringified_any<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: de::Deserializer<'de>,
+    T: FromStr,
+    T::Err: Display,
+{
+    deserializer.deserialize_any(StringifiedAnyVisitor(PhantomData))
+}
+
+pub struct StringifiedAnyVisitor<T>(PhantomData<T>);
+
+impl<'de, T> de::Visitor<'de> for StringifiedAnyVisitor<T>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    type Value = T;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string containing json data")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Self::Value::from_str(v).map_err(E::custom)
+    }
+}
+
+pub fn deserialize_stringified_any_option<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: de::Deserializer<'de>,
+    T: FromStr,
+    T::Err: Display,
+{
+    deserializer.deserialize_any(StringifiedAnyOptionVisitor(PhantomData))
+}
+
+pub struct StringifiedAnyOptionVisitor<T>(PhantomData<T>);
+
+impl<'de, T> de::Visitor<'de> for StringifiedAnyOptionVisitor<T>
+where
+    T: FromStr,
+    T::Err: Display,
+{
+    type Value = Option<T>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a string containing json data or none")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        T::from_str(v).map_err(E::custom).map(Some)
+    }
+
+    fn visit_none<E>(self) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        Ok(None)
+    }
 }
